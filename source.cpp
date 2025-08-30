@@ -7,7 +7,7 @@
 using namespace std;
 
 int main() {
-  string code = "fn add(int a, float b) { return a + b; }";
+  string code = "add(int a, float b) { return a + b; }";
   SimpleLexer lexer(code);
   lexer.lex();
   lexer.printTokens();
