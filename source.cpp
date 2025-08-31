@@ -13,7 +13,9 @@ int main() {
   SimpleLexer lexer(code);
   Regex_Lexer RL;
   lexer.lex();
+  cout<<"WITH OUT REGEX";
   lexer.printTokens();
+  cout<<"WITH REGEX";
   RL.RegexLexer(code);
   return 0;
 }
