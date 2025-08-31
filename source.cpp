@@ -12,10 +12,11 @@ int main() {
   string code = "add(int a, float b) { return a + b; }";
   SimpleLexer lexer(code);
   Regex_Lexer RL;
+  cout<<"INPUT:"<<code<<"\n";
   lexer.lex();
-  cout<<"WITH OUT REGEX";
+  cout<<"OUTPUT";
   lexer.printTokens();
-  cout<<"WITH REGEX";
-  RL.RegexLexer(code);
+  // cout<<"WITH REGEX";
+  // RL.RegexLexer(code);
   return 0;
 }
