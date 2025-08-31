@@ -19,8 +19,6 @@ enum TokenKind {
   T_UNKNOWN
 };
 
-// Using Token from string_queue.hpp; avoid redefining here
-
 class SimpleLexer{
 
   string input;
@@ -238,9 +236,6 @@ public:
   }
 
   void printTokens(){
-    // Custom print format: [T_KIND, T_KIND, T_IDENTIFIER("val"), T_INTLIT(123), ...]
-    // We'll reconstruct from the queue by popping all tokens and printing in order
-    // Note: stringQueue doesn't support iteration without popping; make a copy
     stringQueue copy;
     while (!tq.empty()){
       Token t = tq.pop();
@@ -250,7 +245,6 @@ public:
     bool first = true;
     while (!copy.empty()){
       Token t = copy.pop();
-      // restore into original queue to preserve state
       tq.push(t.type, t.value);
 
       if (!first) cout << ", ";
