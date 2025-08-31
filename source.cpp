@@ -9,7 +9,7 @@
 using namespace std;
 
 int main() {
-  string code = "add(int a, float b) { return a + b; }";
+  string code = "fn add(int a, float b) { return a + b; }";
   SimpleLexer lexer(code);
   Regex_Lexer RL;
   cout<<"INPUT:"<<code<<"\n";
