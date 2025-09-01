@@ -1,4 +1,38 @@
-program.exe
-compile.bat
-.vscode/
+# Build outputs
+*.exe
+*.o
+*.obj
+*.out
+lexer_test
+lexer_test.exe
+
+# Old build files
 lexer.exe
+lexer1.exe
+regex_lexer.exe
+source.exe
+
+# Compiler files
+*.gch
+*.pch
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Backup files
+*.bak
+*.backup

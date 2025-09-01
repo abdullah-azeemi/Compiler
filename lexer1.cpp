@@ -1,8 +1,5 @@
 #include<iostream>
-#include<conio.h>
 #include<string>
-#include<cctype>
-
 #include "string_queue.hpp"
 
 using namespace std;
@@ -20,15 +17,27 @@ enum TokenKind {
 };
 
 class SimpleLexer{
-
   string input;
   int pos;
-
   stringQueue tq;
 
 public:
-  SimpleLexer(string input) : input(input), pos(0){
+  SimpleLexer(string input) : input(input), pos(0) {}
 
+  bool isSpace(char c) {
+    return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+  }
+
+  bool isDigit(char c) {
+    return c >= '0' && c <= '9';
+  }
+
+  bool isAlpha(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+  }
+
+  bool isAlphaNum(char c) {
+    return isAlpha(c) || isDigit(c);
   }
 
   TokenKind getIdentifierKind(string str){
@@ -114,125 +123,74 @@ public:
     }
   }
 
-  void lex(){
-    while (pos < (int)input.size()){
-      char c = input[pos];
-
-      // Whitespace
-      if (isspace(static_cast<unsigned char>(c))){ pos += 1; continue; }
-
-      // Comments
-      if (c == '/'){
-        if (pos + 1 < (int)input.size() && input[pos+1] == '/'){
-          pos += 2;
-          while (pos < (int)input.size() && input[pos] != '\n') pos += 1;
-          continue;
-        } else if (pos + 1 < (int)input.size() && input[pos+1] == '*'){
-          pos += 2;
-          while (pos + 1 < (int)input.size() && !(input[pos] == '*' && input[pos+1] == '/')) pos += 1;
-          if (pos + 1 < (int)input.size()) pos += 2; else tq.push("UNKNOWN", "Unterminated comment");
-          continue;
-        }
-      }
-
-      // Strings with escapes
-      if (c == '"'){
-        string quote(1, '"');
-        tq.push(kindToCString(T_QUOTES), quote.c_str());
-        pos += 1;
-        string lit = "";
-        bool terminated = false;
-        while (pos < (int)input.size()){
-          char ch = input[pos++];
-          if (ch == '\\'){
-            if (pos >= (int)input.size()) break;
-            char esc = input[pos++];
-            switch(esc){
-              case 'n': lit.push_back('\n'); break;
-              case 't': lit.push_back('\t'); break;
-              case 'r': lit.push_back('\r'); break;
-              case '\\': lit.push_back('\\'); break;
-              case '"': lit.push_back('"'); break;
-              default: lit.push_back(esc); break;
-            }
-          } else if (ch == '"'){
-            terminated = true;
-            break;
-          } else {
-            lit.push_back(ch);
-          }
-        }
-        tq.push(kindToCString(T_STRINGLIT), lit.c_str());
-        tq.push(kindToCString(T_QUOTES), quote.c_str());
-        if (!terminated) tq.push("UNKNOWN", "Unterminated string");
-        continue;
-      }
-
-      // Numbers (int/float)
-      if (isdigit(static_cast<unsigned char>(c))){
-        int start = pos;
-        bool isFloat = false;
-        while (pos < (int)input.size() && isdigit(static_cast<unsigned char>(input[pos]))) pos += 1;
-        if (pos < (int)input.size() && input[pos] == '.'){
-          isFloat = true;
-          pos += 1;
-          while (pos < (int)input.size() && isdigit(static_cast<unsigned char>(input[pos]))) pos += 1;
-        }
-        if (pos < (int)input.size() && (isalpha(static_cast<unsigned char>(input[pos])) || input[pos] == '_')){
-          tq.push("UNKNOWN", "Invalid identifier starts with digit");
-          while (pos < (int)input.size() && (isalnum(static_cast<unsigned char>(input[pos])) || input[pos] == '_')) pos += 1;
-          continue;
-        }
-        string num = input.substr(start, pos - start);
-        if (isFloat) tq.push(kindToCString(T_FLOATLIT), num.c_str());
-        else tq.push(kindToCString(T_INTLIT), num.c_str());
-        continue;
-      }
-
-      // Identifier or keyword
-      if (isalpha(static_cast<unsigned char>(c)) || c == '_'){
-        int start = pos;
-        pos += 1;
-        while (pos < (int)input.size() && (isalnum(static_cast<unsigned char>(input[pos])) || input[pos] == '_')) pos += 1;
-        string word = input.substr(start, pos - start);
-        TokenKind k = getIdentifierKind(word);
-        if (k != T_UNKNOWN && k != T_IDENTIFIER){
-          tq.push(kindToCString(k), word.c_str());
-        } else {
-          tq.push(kindToCString(T_IDENTIFIER), word.c_str());
-        }
-        continue;
-      }
-
-      // Two-character operators
-      if (pos + 1 < (int)input.size()){
-        string two = input.substr(pos, 2);
-        TokenKind k2 = getIdentifierKind(two);
-        if (k2 != T_UNKNOWN){
-          tq.push(kindToCString(k2), two.c_str());
-          pos += 2;
-          continue;
-        }
-      }
-
-      // Single-character operators and delimiters
-      {
-        string one(1, c);
-        TokenKind k1 = getIdentifierKind(one);
-        if (k1 != T_UNKNOWN){
-          tq.push(kindToCString(k1), one.c_str());
-          pos += 1;
-          continue;
-        }
-      }
-
-      // Unknown
-      {
-        string unk(1, c);
-        tq.push(kindToCString(T_UNKNOWN), unk.c_str());
-        pos += 1;
-      }
+  bool isNumber(string str) {
+    for (int i = 0; i < str.length(); i++) {
+      if (i == 0 && str[i] == '-') continue;
+      if (str[i] == '.' && i > 0) continue;
+      if (!isDigit(str[i])) return false;
     }
+    return true;
+  }
+
+  bool isFloat(string str) {
+    return str.find('.') != string::npos && isNumber(str);
+  }
+
+  void lex(){
+    string word = "";
+    
+    for (int i = 0; i < input.length(); i++) {
+      char c = input[i];
+      
+      if (isSpace(c)) {
+        if (word != "") {
+          processWord(word);
+          word = "";
+        }
+        continue;
+      }
+      
+      string singleChar(1, c);
+      if (getIdentifierKind(singleChar) != T_UNKNOWN) {
+        if (word != "") {
+          processWord(word);
+          word = "";
+        }
+        processWord(singleChar);
+        continue;
+      }
+      
+      word += c;
+    }
+    
+    if (word != "") {
+      processWord(word);
+    }
+  }
+
+  void processWord(string word) {
+    TokenKind kind = getIdentifierKind(word);
+    
+    if (kind != T_UNKNOWN) {
+      tq.push(kindToCString(kind), word.c_str());
+      return;
+    }
+    
+    if (isNumber(word)) {
+      if (isFloat(word)) {
+        tq.push("FLOATLIT", word.c_str());
+      } else {
+        tq.push("INTLIT", word.c_str());
+      }
+      return;
+    }
+    
+    if (word.length() >= 2 && word[0] == '"' && word[word.length()-1] == '"') {
+      tq.push("STRINGLIT", word.c_str());
+      return;
+    }
+    
+    tq.push("IDENTIFIER", word.c_str());
   }
 
   void printTokens(){
@@ -265,8 +223,4 @@ public:
     }
     cout << "]" << endl;
   }
-
-  
-
-
 };

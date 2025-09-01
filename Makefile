@@ -1,28 +1,29 @@
-# Compiler and flags
-CXX ?= g++
-CXXFLAGS ?= -std=c++17 -O2 -Wall
+# Simple Lexer Makefile
 
-# Sources and binary name
-SRC := source.cpp
-BIN := lexer
+CXX = g++
+CXXFLAGS = -std=c++17 -Wall
 
-# Detect Windows executable suffix
-ifeq ($(OS),Windows_NT)
-  EXE := $(BIN).exe
-else
-  EXE := $(BIN)
-endif
+# Files
+SRC = source.cpp
+EXE = lexer_test
 
-.PHONY: all run clean
-
+# Build the lexer
 all: $(EXE)
 
-$(EXE): $(SRC) lexer1.cpp string_queue.hpp
+$(EXE): $(SRC)
 	$(CXX) $(CXXFLAGS) $(SRC) -o $(EXE)
 
+# Run the lexer
 run: $(EXE)
 	./$(EXE)
 
+# Clean up
 clean:
-	$(RM) $(EXE)
+	rm -f $(EXE)
+
+# Show help
+help:
+	@echo "make      - Build the lexer"
+	@echo "make run  - Build and run"
+	@echo "make clean - Remove executable"
 
