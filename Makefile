@@ -4,7 +4,7 @@ CXX = g++
 CXXFLAGS = -std=c++17 -Wall
 
 # Files
-SRC = source.cpp
+SRC = lexer1.cpp regex_lexer.cpp
 EXE = lexer_test
 
 # Build the lexer
@@ -23,7 +23,6 @@ clean:
 
 # Show help
 help:
-	@echo "make      - Build the lexer"
-	@echo "make run  - Build and run"
+	@echo "make       - Build the lexer"
+	@echo "make run   - Build and run"
 	@echo "make clean - Remove executable"
-

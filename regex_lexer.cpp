@@ -6,7 +6,8 @@
 using namespace std;
 
 regex keyword("(fn|return|if|else|while|for|int|float|string|bool)");
-regex identifier("[a-zA-Z_][a-zA-Z0-9_]*");
+// regex identifier("[a-zA-Z_][a-zA-Z0-9_]*");
+regex identifier("([_[:alpha:]][_[:alnum:]_]*)");
 regex floats("[0-9]+\\.[0-9]+");
 regex integers("[0-9]+");
 regex strings("\"(\\\\.|[^\"])*\"");
@@ -19,6 +20,10 @@ regex logical("(\\|\\||&&|!)");
 regex operations("[+\\-*/%]");
 regex semicolon(";"), comma(","), dot("\\."), quotes("\"");
 regex spaces("\\s+");
+regex comment("\\\\");
+regex singleLineComment("//.*");
+regex multiLineComment("/\\*([^*]|(\\*+[^*/]))*\\*+/");
+regex bitwise("[&|^]");
 
 enum TokenType
 {
@@ -55,7 +60,13 @@ enum TokenType
     T_COMMA_RL,
     T_DOT_RL,
     T_QUOTES_RL,
-    T_UNKNOWN_RL
+    T_UNKNOWN_RL,
+    T_SINGLE_COMMENT_RL,
+    T_MULTI_COMMENT_RL,
+    T_AND_RL,
+    T_OR_RL,
+    T_XOR_RL,
+
 };
 
 class Regex_Lexer
@@ -131,6 +142,10 @@ public:
             return "T_DOT_RL";
         case T_QUOTES_RL:
             return "T_QUOTES_RL";
+        case T_SINGLE_COMMENT_RL:
+            return "T_SINGLE_COMMENT_RL(\"" + val + "\")";
+        case T_MULTI_COMMENT_RL:
+            return "T_MULTI_COMMENT_RL(\"" + val + "\")";
         default:
             return "T_UNKNOWN_RL(" + val + ")";
         }
@@ -179,6 +194,13 @@ public:
                     tokens.push_back({T_STRING_RL, val});
                 else if (val == "bool")
                     tokens.push_back({T_BOOL_RL, val});
+                else if (val == "&")
+                    tokens.push_back({T_AND_RL, val});
+                else if (val == "|")
+                    tokens.push_back({T_OR_RL, val});
+                else if (val == "^")
+                    tokens.push_back({T_XOR_RL, val});
+
                 begin += match.length();
                 continue;
             }
@@ -297,6 +319,30 @@ public:
             if (regex_search(begin, code.end(), match, quotes) && match.position() == 0)
             {
                 tokens.push_back({T_QUOTES_RL, match.str()});
+                begin += match.length();
+                continue;
+            }
+            if (regex_search(begin, code.end(), match, multiLineComment) && match.position() == 0)
+            {
+                tokens.push_back({T_MULTI_COMMENT_RL, match.str()});
+                begin += match.length();
+                continue;
+            }
+            if (regex_search(begin, code.end(), match, singleLineComment) && match.position() == 0)
+            {
+                tokens.push_back({T_SINGLE_COMMENT_RL, match.str()});
+                begin += match.length();
+                continue;
+            }
+            if (regex_search(begin, code.end(), match, bitwise) && match.position() == 0)
+            {
+                string val = match.str();
+                if (val == "&")
+                    tokens.push_back({T_UNKNOWN_RL, "&"});
+                else if (val == "|")
+                    tokens.push_back({T_UNKNOWN_RL, "|"});
+                else if (val == "^")
+                    tokens.push_back({T_UNKNOWN_RL, "^"});
                 begin += match.length();
                 continue;
             }
