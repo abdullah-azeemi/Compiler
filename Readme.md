@@ -24,5 +24,5 @@ A basic lexical analyzer that converts code into tokens.
 - Numbers: 42, 3.14
 - Names: variable names
 
-![alt text](image.png)
-![alt text](image-1.png)
+![alt text](Results/images/image.png)
+![alt text](Results/images/image-1.png)
