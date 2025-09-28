@@ -1,199 +1,283 @@
-#ifndef AST_HPP
-#define AST_HPP
+#ifndef SIMPLE_AST_HPP
+#define SIMPLE_AST_HPP
 
-#include <memory>
-#include <vector>
 #include <string>
-#include <variant>
+#include <vector>
 #include "Utilities/token_types.hpp"
+
 using namespace std;
 
-struct Expr;
-struct Stmt;
+// My approach: Think of AST nodes like LEGO blocks
+// Each block has a type so we know what it is
 
-using ExprPtr = std::shared_ptr<Expr>;
-using StmtPtr = std::shared_ptr<Stmt>;
-
-// Expression types
-struct IntLiteral
+enum NodeType
 {
+  NODE_INT_LIT,
+  NODE_FLOAT_LIT,
+  NODE_STRING_LIT,
+  NODE_BOOL_LIT,
+  NODE_IDENTIFIER,
+  NODE_BINARY_OP,
+  NODE_UNARY_OP,
+  NODE_ASSIGNMENT,
+  NODE_FUNC_CALL,
+  NODE_VAR_DECL,
+  NODE_EXPR_STMT,
+  NODE_RETURN,
+  NODE_BREAK,
+  NODE_CONTINUE,
+  NODE_BLOCK,
+  NODE_IF,
+  NODE_WHILE,
+  NODE_FOR,
+  NODE_FUNC_DECL
+};
+
+// Base class for all AST nodes
+class ASTNode
+{
+public:
+  NodeType nodeType;
+  virtual ~ASTNode() {}
+};
+
+// ===== EXPRESSIONS =====
+// These calculate values
+
+class Expr : public ASTNode
+{
+public:
+  virtual ~Expr() {}
+};
+
+class IntLiteral : public Expr
+{
+public:
   int value;
-  IntLiteral(int v) : value(v) {}
+  IntLiteral(int v) : value(v) { nodeType = NODE_INT_LIT; }
 };
 
-struct FloatLiteral
+class FloatLiteral : public Expr
 {
+public:
   double value;
-  FloatLiteral(double v) : value(v) {}
+  FloatLiteral(double v) : value(v) { nodeType = NODE_FLOAT_LIT; }
 };
 
-struct StringLiteral
+class StringLiteral : public Expr
 {
-  std::string value;
-  StringLiteral(const string &v) : value(v) {}
+public:
+  string value;
+  StringLiteral(string v) : value(v) { nodeType = NODE_STRING_LIT; }
 };
 
-struct BoolLiteral
+class BoolLiteral : public Expr
 {
+public:
   bool value;
-  BoolLiteral(bool v) : value(v) {}
+  BoolLiteral(bool v) : value(v) { nodeType = NODE_BOOL_LIT; }
 };
 
-struct Identifier
+class Identifier : public Expr
 {
-  std::string name;
-  Identifier(const string &n) : name(n) {}
-};
-
-struct BinaryOp
-{
-  TokenType op;
-  ExprPtr left;
-  ExprPtr right;
-  BinaryOp(TokenType o, ExprPtr l, ExprPtr r) : op(o), left(l), right(r) {}
-};
-
-struct UnaryOp
-{
-  TokenType op;
-  ExprPtr operand;
-  UnaryOp(TokenType o, ExprPtr e) : op(o), operand(e) {}
-};
-
-struct Assignment
-{
-  std::string ident;
-  ExprPtr value;
-  Assignment(const std::string &i, ExprPtr v) : ident(i), value(v) {}
-};
-
-struct FunctionCall
-{
+public:
   string name;
-  vector<ExprPtr> args;
-  FunctionCall(const string &n, vector<ExprPtr> a) : name(n), args(a) {}
+  Identifier(string n) : name(n) { nodeType = NODE_IDENTIFIER; }
 };
 
-struct ArrayAccess
+class BinaryOp : public Expr
 {
-  ExprPtr array;
-  ExprPtr index;
-  ArrayAccess(ExprPtr a, ExprPtr i) : array(a), index(i) {}
+public:
+  TokenType op;
+  Expr *left;
+  Expr *right;
+  BinaryOp(TokenType o, Expr *l, Expr *r) : op(o), left(l), right(r)
+  {
+    nodeType = NODE_BINARY_OP;
+  }
+  ~BinaryOp()
+  {
+    delete left;
+    delete right;
+  }
 };
 
-struct Expr
+class UnaryOp : public Expr
 {
-  variant<
-      IntLiteral,
-      FloatLiteral,
-      StringLiteral,
-      BoolLiteral,
-      Identifier,
-      BinaryOp,
-      UnaryOp,
-      Assignment,
-      FunctionCall,
-      ArrayAccess>
-      value;
-
-  template <typename T>
-  Expr(T &&val) : value(std::forward<T>(val)) {}
+public:
+  TokenType op;
+  Expr *operand;
+  UnaryOp(TokenType o, Expr *e) : op(o), operand(e)
+  {
+    nodeType = NODE_UNARY_OP;
+  }
+  ~UnaryOp() { delete operand; }
 };
 
-struct VarDecl
+class Assignment : public Expr
 {
+public:
+  string ident;
+  Expr *value;
+  Assignment(string i, Expr *v) : ident(i), value(v)
+  {
+    nodeType = NODE_ASSIGNMENT;
+  }
+  ~Assignment() { delete value; }
+};
+
+class FunctionCall : public Expr
+{
+public:
+  string name;
+  vector<Expr *> args;
+  FunctionCall(string n) : name(n) { nodeType = NODE_FUNC_CALL; }
+  ~FunctionCall()
+  {
+    for (auto arg : args)
+      delete arg;
+  }
+};
+
+// ===== STATEMENTS =====
+// These do actions
+
+class Stmt : public ASTNode
+{
+public:
+  virtual ~Stmt() {}
+};
+
+class VarDecl : public Stmt
+{
+public:
   TokenType type;
   string ident;
-  ExprPtr expr;
-  VarDecl(TokenType t, const string &i, ExprPtr e = nullptr)
-      : type(t), ident(i), expr(e) {}
+  Expr *expr;
+  VarDecl(TokenType t, string i, Expr *e = nullptr)
+      : type(t), ident(i), expr(e)
+  {
+    nodeType = NODE_VAR_DECL;
+  }
+  ~VarDecl() { delete expr; }
 };
 
-struct ExprStmt
+class ExprStmt : public Stmt
 {
-  ExprPtr expr;
-  ExprStmt(ExprPtr e = nullptr) : expr(e) {}
+public:
+  Expr *expr;
+  ExprStmt(Expr *e) : expr(e) { nodeType = NODE_EXPR_STMT; }
+  ~ExprStmt() { delete expr; }
 };
 
-struct ReturnStmt
+class ReturnStmt : public Stmt
 {
-  ExprPtr expr;
-  ReturnStmt(ExprPtr e = nullptr) : expr(e) {}
+public:
+  Expr *expr;
+  ReturnStmt(Expr *e = nullptr) : expr(e) { nodeType = NODE_RETURN; }
+  ~ReturnStmt() { delete expr; }
 };
 
-struct BreakStmt
+class BreakStmt : public Stmt
 {
-};
-struct ContinueStmt
-{
-};
-
-struct Block
-{
-  vector<StmtPtr> stmts;
-  Block(vector<StmtPtr> s = {}) : stmts(s) {}
+public:
+  BreakStmt() { nodeType = NODE_BREAK; }
 };
 
-struct IfStmt
+class ContinueStmt : public Stmt
 {
-  ExprPtr condition;
-  StmtPtr thenBranch;
-  StmtPtr elseBranch;
-  IfStmt(ExprPtr c, StmtPtr t, StmtPtr e = nullptr)
-      : condition(c), thenBranch(t), elseBranch(e) {}
+public:
+  ContinueStmt() { nodeType = NODE_CONTINUE; }
 };
 
-struct WhileStmt
+class Block : public Stmt
 {
-  ExprPtr condition;
-  StmtPtr body;
-  WhileStmt(ExprPtr c, StmtPtr b) : condition(c), body(b) {}
+public:
+  vector<Stmt *> stmts;
+  Block() { nodeType = NODE_BLOCK; }
+  ~Block()
+  {
+    for (auto stmt : stmts)
+      delete stmt;
+  }
 };
 
-struct ForStmt
+class IfStmt : public Stmt
 {
-  StmtPtr init;
-  ExprPtr condition;
-  ExprPtr update;
-  StmtPtr body;
-  ForStmt(StmtPtr i, ExprPtr c, ExprPtr u, StmtPtr b)
-      : init(i), condition(c), update(u), body(b) {}
+public:
+  Expr *condition;
+  Stmt *thenBranch;
+  Stmt *elseBranch;
+  IfStmt(Expr *c, Stmt *t, Stmt *e = nullptr)
+      : condition(c), thenBranch(t), elseBranch(e)
+  {
+    nodeType = NODE_IF;
+  }
+  ~IfStmt()
+  {
+    delete condition;
+    delete thenBranch;
+    delete elseBranch;
+  }
+};
+
+class WhileStmt : public Stmt
+{
+public:
+  Expr *condition;
+  Stmt *body;
+  WhileStmt(Expr *c, Stmt *b) : condition(c), body(b)
+  {
+    nodeType = NODE_WHILE;
+  }
+  ~WhileStmt()
+  {
+    delete condition;
+    delete body;
+  }
+};
+
+class ForStmt : public Stmt
+{
+public:
+  Stmt *init;
+  Expr *condition;
+  Expr *update;
+  Stmt *body;
+  ForStmt(Stmt *i, Expr *c, Expr *u, Stmt *b)
+      : init(i), condition(c), update(u), body(b)
+  {
+    nodeType = NODE_FOR;
+  }
+  ~ForStmt()
+  {
+    delete init;
+    delete condition;
+    delete update;
+    delete body;
+  }
 };
 
 struct Param
 {
   TokenType type;
   string name;
-  Param(TokenType t, const std::string &n) : type(t), name(n) {}
+  Param(TokenType t, string n) : type(t), name(n) {}
 };
 
-struct FunctionDecl
+class FunctionDecl : public Stmt
 {
+public:
   TokenType returnType;
   string name;
   vector<Param> params;
-  StmtPtr body;
-  FunctionDecl(TokenType rt, const string &n, vector<Param> p, StmtPtr b)
-      : returnType(rt), name(n), params(p), body(b) {}
-};
-
-struct Stmt
-{
-  variant<
-      VarDecl,
-      ExprStmt,
-      ReturnStmt,
-      BreakStmt,
-      ContinueStmt,
-      Block,
-      IfStmt,
-      WhileStmt,
-      ForStmt,
-      FunctionDecl>
-      value;
-
-  template <typename T>
-  Stmt(T &&val) : value(std::forward<T>(val)) {}
+  Stmt *body;
+  FunctionDecl(TokenType rt, string n, vector<Param> p, Stmt *b)
+      : returnType(rt), name(n), params(p), body(b)
+  {
+    nodeType = NODE_FUNC_DECL;
+  }
+  ~FunctionDecl() { delete body; }
 };
 
 #endif
