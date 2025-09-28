@@ -1,509 +1,609 @@
 #ifndef PARSER_HPP
 #define PARSER_HPP
 
+#include <iostream>
+#include <vector>
+#include <string>
 #include "Utilities/token_types.hpp"
 #include "ast.hpp"
-#include <stdexcept>
-#include <sstream>
-#include <iostream>
 
 using namespace std;
 
-enum class ParseError
-{
-  UnexpectedEOF,
-  FailedToFindToken,
-  ExpectedTypeToken,
-  ExpectedIdentifier,
-  UnexpectedToken,
-  ExpectedFloatLit,
-  ExpectedIntLit,
-  ExpectedStringLit,
-  ExpectedBoolLit,
-  ExpectedExpr
-};
-
-class ParseException : public std::runtime_error
-{
-public:
-  ParseError error;
-  Token token;
-
-  ParseException(ParseError e, const Token &t, const std::string &msg)
-      : std::runtime_error(msg), error(e), token(t) {}
-};
+// My parsing approach: Look ahead and decide what block to build!
+// Like looking at LEGO instructions - see what piece comes next
 
 class Parser
 {
 private:
   vector<Token> tokens;
-  size_t current = 0;
+  int pos;
 
-  bool isAtEnd()
+  // Helper to check if we're done
+  bool isEnd()
   {
-    return peek().type == T_EOF_RL;
+    return pos >= tokens.size() || tokens[pos].type == T_EOF_RL;
   }
 
-  Token peek(int offset = 0)
+  // Look at current token without moving
+  Token currentToken()
   {
-    size_t index = current + offset;
-    if (index >= tokens.size())
-      return tokens.back();
-    return tokens[index];
+    if (pos < tokens.size())
+      return tokens[pos];
+    return tokens.back();
   }
 
-  Token advance()
+  // Look ahead at next token
+  Token peekNext()
   {
-    if (!isAtEnd())
-      current++;
-    return previous();
+    if (pos + 1 < tokens.size())
+      return tokens[pos + 1];
+    return tokens.back();
   }
 
-  Token previous()
+  // Move to next token
+  void nextToken()
   {
-    if (current == 0)
-      return tokens[0];
-    return tokens[current - 1];
+    if (!isEnd())
+      pos++;
   }
 
-  bool check(TokenType type)
+  // Check if current token is what we expect
+  bool isToken(TokenType type)
   {
-    if (isAtEnd())
-      return false;
-    return peek().type == type;
+    return currentToken().type == type;
   }
 
-  bool match(std::initializer_list<TokenType> types)
+  // Eat a token if it matches
+  bool eatToken(TokenType type)
   {
-    for (auto type : types)
+    if (isToken(type))
     {
-      if (check(type))
-      {
-        advance();
-        return true;
-      }
+      nextToken();
+      return true;
     }
     return false;
   }
 
-  Token consume(TokenType type, ParseError error, const std::string &message)
+  // Get token and move forward
+  Token getToken()
   {
-    if (check(type))
-      return advance();
-    throw ParseException(error, peek(), message + " at line " + std::to_string(peek().line) + ", col " + std::to_string(peek().column));
+    Token t = currentToken();
+    nextToken();
+    return t;
   }
 
-  bool isType(TokenType type)
+  // Check if token is a type keyword
+  bool isTypeKeyword()
   {
-    return type == T_INT_RL || type == T_FLOAT_RL ||
-           type == T_STRING_RL || type == T_BOOL_RL ||
-           type == T_GINTI_RL;
+    TokenType t = currentToken().type;
+    return t == T_INT_RL || t == T_FLOAT_RL ||
+           t == T_STRING_RL || t == T_BOOL_RL || t == T_GINTI_RL;
   }
 
-  ExprPtr parsePrimary()
+  // Error handling - simple!
+  void error(string msg)
   {
-    if (match({T_INT_RLLIT}))
-    {
-      return make_shared<Expr>(IntLiteral(stoi(previous().value)));
-    }
-    if (match({T_FLOAT_RLLIT}))
-    {
-      return make_shared<Expr>(FloatLiteral(stod(previous().value)));
-    }
-    if (match({T_STRING_RLLIT}))
-    {
-      return make_shared<Expr>(StringLiteral(previous().value));
-    }
-    if (match({T_BOOL_RLLIT}))
-    {
-      return make_shared<Expr>(BoolLiteral(previous().value == "true"));
-    }
-    if (match({T_IDENTIFIER_RL}))
-    {
-      string ident = previous().value;
+    cerr << "Parse Error at line " << currentToken().line
+         << ": " << msg << endl;
+    cerr << "Got token: " << currentToken().value << endl;
+    exit(1);
+  }
 
-      if (match({T_PARENL_RL}))
+  // ===== EXPRESSION PARSING =====
+  // Build expressions from bottom up, like stacking blocks
+
+  Expr *parsePrimary()
+  {
+    Token tok = currentToken();
+
+    // Integer literal
+    if (tok.type == T_INT_RLLIT)
+    {
+      nextToken();
+      return new IntLiteral(stoi(tok.value));
+    }
+
+    // Float literal
+    if (tok.type == T_FLOAT_RLLIT)
+    {
+      nextToken();
+      return new FloatLiteral(stod(tok.value));
+    }
+
+    // String literal
+    if (tok.type == T_STRING_RLLIT)
+    {
+      nextToken();
+      return new StringLiteral(tok.value);
+    }
+
+    // Boolean literal
+    if (tok.type == T_BOOL_RLLIT)
+    {
+      nextToken();
+      return new BoolLiteral(tok.value == "true");
+    }
+
+    // Identifier or function call
+    if (tok.type == T_IDENTIFIER_RL)
+    {
+      string name = tok.value;
+      nextToken();
+
+      // Function call?
+      if (isToken(T_PARENL_RL))
       {
-        vector<ExprPtr> args;
-        if (!check(T_PARENR_RL))
+        nextToken(); // eat (
+        FunctionCall *call = new FunctionCall(name);
+
+        // Parse arguments
+        while (!isToken(T_PARENR_RL) && !isEnd())
         {
-          do
+          call->args.push_back(parseExpression());
+          if (!eatToken(T_COMMA_RL) && !isToken(T_PARENR_RL))
           {
-            args.push_back(parseExpression());
-          } while (match({T_COMMA_RL}));
+            error("Expected ',' or ')' in function call");
+          }
         }
-        consume(T_PARENR_RL, ParseError::FailedToFindToken, "Expected ')' after arguments");
-        return std::make_shared<Expr>(FunctionCall(ident, args));
+
+        if (!eatToken(T_PARENR_RL))
+        {
+          error("Expected ')' after function arguments");
+        }
+        return call;
       }
 
-      if (match({T_BRACKETL_RL}))
-      {
-        ExprPtr index = parseExpression();
-        consume(T_BRACKETR_RL, ParseError::FailedToFindToken, "Expected ']' after array index");
-        return std::make_shared<Expr>(
-            ArrayAccess(std::make_shared<Expr>(Identifier(ident)), index));
-      }
-
-      return make_shared<Expr>(Identifier(ident));
+      return new Identifier(name);
     }
-    if (match({T_PARENL_RL}))
+
+    // Parenthesized expression
+    if (tok.type == T_PARENL_RL)
     {
-      ExprPtr expr = parseExpression();
-      consume(T_PARENR_RL, ParseError::FailedToFindToken, "Expected ')' after expression");
+      nextToken();
+      Expr *expr = parseExpression();
+      if (!eatToken(T_PARENR_RL))
+      {
+        error("Expected ')' after expression");
+      }
       return expr;
     }
 
-    throw ParseException(ParseError::ExpectedExpr, peek(), "Expected expression");
+    error("Expected expression");
+    return nullptr;
   }
 
-  ExprPtr parseUnary()
+  Expr *parseUnary()
   {
-    if (match({T_NOT_RL, T_MINUS_RL}))
+    // Handle unary operators (-, !)
+    if (isToken(T_MINUS_RL) || isToken(T_NOT_RL))
     {
-      Token op = previous();
-      ExprPtr right = parseUnary();
-      return make_shared<Expr>(UnaryOp(op.type, right));
+      Token op = getToken();
+      return new UnaryOp(op.type, parseUnary());
     }
     return parsePrimary();
   }
 
-  ExprPtr parseMultiplicative()
-  {
-    ExprPtr expr = parseUnary();
+  // Binary operations - using precedence climbing!
+  // Think of it like building layers of blocks
 
-    while (match({T_MUL_RL, T_DIV_RL, T_MOD_RL}))
+  Expr *parseMultiply()
+  {
+    Expr *left = parseUnary();
+
+    while (isToken(T_MUL_RL) || isToken(T_DIV_RL) || isToken(T_MOD_RL))
     {
-      Token op = previous();
-      ExprPtr right = parseUnary();
-      expr = make_shared<Expr>(BinaryOp(op.type, expr, right));
+      Token op = getToken();
+      Expr *right = parseUnary();
+      left = new BinaryOp(op.type, left, right);
     }
 
-    return expr;
+    return left;
   }
 
-  ExprPtr parseAdditive()
+  Expr *parseAdd()
   {
-    ExprPtr expr = parseMultiplicative();
+    Expr *left = parseMultiply();
 
-    while (match({T_PLUS_RL, T_MINUS_RL}))
+    while (isToken(T_PLUS_RL) || isToken(T_MINUS_RL))
     {
-      Token op = previous();
-      ExprPtr right = parseMultiplicative();
-      expr = make_shared<Expr>(BinaryOp(op.type, expr, right));
+      Token op = getToken();
+      Expr *right = parseMultiply();
+      left = new BinaryOp(op.type, left, right);
     }
 
-    return expr;
+    return left;
   }
 
-  ExprPtr parseBitwise()
+  Expr *parseCompare()
   {
-    ExprPtr expr = parseAdditive();
+    Expr *left = parseAdd();
 
-    while (match({T_AND_BIT_RL, T_OR_BIT_RL, T_XOR_BIT_RL}))
+    while (isToken(T_LESS_THAN_RL) || isToken(T_GREATER_THAN_RL) ||
+           isToken(T_LESS_EQUAL_RL) || isToken(T_GREATER_EQUAL_RL))
     {
-      Token op = previous();
-      ExprPtr right = parseAdditive();
-      expr = make_shared<Expr>(BinaryOp(op.type, expr, right));
+      Token op = getToken();
+      Expr *right = parseAdd();
+      left = new BinaryOp(op.type, left, right);
     }
 
-    return expr;
+    return left;
   }
 
-  ExprPtr parseComparison()
+  Expr *parseEquality()
   {
-    ExprPtr expr = parseBitwise();
+    Expr *left = parseCompare();
 
-    while (match({T_LESS_THAN_RL, T_GREATER_THAN_RL, T_LESS_EQUAL_RL, T_GREATER_EQUAL_RL}))
+    while (isToken(T_EQUALSOP_RL) || isToken(T_NOT_EQUALS_RL))
     {
-      Token op = previous();
-      ExprPtr right = parseBitwise();
-      expr = make_shared<Expr>(BinaryOp(op.type, expr, right));
+      Token op = getToken();
+      Expr *right = parseCompare();
+      left = new BinaryOp(op.type, left, right);
     }
 
-    return expr;
+    return left;
   }
-  ExprPtr parseEquality()
-  {
-    ExprPtr expr = parseComparison();
 
-    while (match({T_EQUALSOP_RL, T_NOT_EQUALS_RL}))
+  Expr *parseLogicalAnd()
+  {
+    Expr *left = parseEquality();
+
+    while (isToken(T_AND_LOGICAL_RL))
     {
-      Token op = previous();
-      ExprPtr right = parseComparison();
-      expr = make_shared<Expr>(BinaryOp(op.type, expr, right));
+      Token op = getToken();
+      Expr *right = parseEquality();
+      left = new BinaryOp(op.type, left, right);
     }
 
-    return expr;
+    return left;
   }
 
-  ExprPtr parseLogicalAnd()
+  Expr *parseLogicalOr()
   {
-    ExprPtr expr = parseEquality();
+    Expr *left = parseLogicalAnd();
 
-    while (match({T_AND_LOGICAL_RL}))
+    while (isToken(T_OR_LOGICAL_RL))
     {
-      Token op = previous();
-      ExprPtr right = parseEquality();
-      expr = make_shared<Expr>(BinaryOp(op.type, expr, right));
+      Token op = getToken();
+      Expr *right = parseLogicalAnd();
+      left = new BinaryOp(op.type, left, right);
     }
 
-    return expr;
+    return left;
   }
 
-  ExprPtr parseLogicalOr()
+  Expr *parseAssign()
   {
-    ExprPtr expr = parseLogicalAnd();
+    Expr *left = parseLogicalOr();
 
-    while (match({T_OR_LOGICAL_RL}))
+    if (isToken(T_ASSIGNOP_RL))
     {
-      Token op = previous();
-      ExprPtr right = parseLogicalAnd();
-      expr = make_shared<Expr>(BinaryOp(op.type, expr, right));
-    }
-
-    return expr;
-  }
-
-  ExprPtr parseAssignment()
-  {
-    ExprPtr expr = parseLogicalOr();
-
-    if (match({T_ASSIGNOP_RL}))
-    {
-      if (auto *ident = get_if<Identifier>(&expr->value))
+      // Check if left is an identifier
+      if (left->nodeType != NODE_IDENTIFIER)
       {
-        ExprPtr value = parseAssignment();
-        return make_shared<Expr>(Assignment(ident->name, value));
+        error("Can only assign to variables");
       }
-      throw ParseException(ParseError::UnexpectedToken, previous(), "Invalid assignment target");
+      Identifier *id = (Identifier *)left;
+      string name = id->name;
+      delete left; // Clean up
+
+      nextToken();                 // eat =
+      Expr *value = parseAssign(); // Right associative
+      return new Assignment(name, value);
     }
 
-    return expr;
+    return left;
   }
 
-  ExprPtr parseExpression()
+  Expr *parseExpression()
   {
-    return parseAssignment();
+    return parseAssign();
   }
 
-  StmtPtr parseVarDecl()
-  {
-    Token type = previous();
-    Token name = consume(T_IDENTIFIER_RL, ParseError::ExpectedIdentifier, "Expected variable name");
+  // ===== STATEMENT PARSING =====
 
-    ExprPtr initializer = nullptr;
-    if (match({T_ASSIGNOP_RL}))
+  Stmt *parseVarDecl()
+  {
+    Token typeToken = getToken();
+
+    if (!isToken(T_IDENTIFIER_RL))
     {
-      initializer = parseExpression();
+      error("Expected variable name");
+    }
+    string name = getToken().value;
+
+    Expr *init = nullptr;
+    if (eatToken(T_ASSIGNOP_RL))
+    {
+      init = parseExpression();
     }
 
-    consume(T_DOT_RL, ParseError::FailedToFindToken, "Expected '.' after variable declaration");
-    return make_shared<Stmt>(VarDecl(type.type, name.value, initializer));
-  }
-
-  StmtPtr parseBlock()
-  {
-    std::vector<StmtPtr> statements;
-
-    while (!check(T_BRACER_RL) && !isAtEnd())
+    if (!eatToken(T_DOT_RL))
     {
-      statements.push_back(parseStatement());
+      error("Expected '.' after variable declaration");
     }
 
-    consume(T_BRACER_RL, ParseError::FailedToFindToken,
-            "Expected '}' after block");
-    return make_shared<Stmt>(Block(statements));
+    return new VarDecl(typeToken.type, name, init);
   }
 
-  StmtPtr parseIfStatement()
+  Stmt *parseBlock()
   {
-    consume(T_PARENL_RL, ParseError::FailedToFindToken, "Expected '(' after 'if'");
-    ExprPtr condition = parseExpression();
-    consume(T_PARENR_RL, ParseError::FailedToFindToken, "Expected ')' after if condition");
+    Block *block = new Block();
 
-    consume(T_BRACEL_RL, ParseError::FailedToFindToken, "Expected '{' before if body");
-    StmtPtr thenBranch = parseBlock();
-
-    StmtPtr elseBranch = nullptr;
-    if (match({T_ELSE_RL, T_WARNA_RL}))
+    while (!isToken(T_BRACER_RL) && !isEnd())
     {
-      consume(T_BRACEL_RL, ParseError::FailedToFindToken, "Expected '{' before else body");
+      block->stmts.push_back(parseStatement());
+    }
+
+    if (!eatToken(T_BRACER_RL))
+    {
+      error("Expected '}' after block");
+    }
+
+    return block;
+  }
+
+  Stmt *parseIfStatement()
+  {
+    if (!eatToken(T_PARENL_RL))
+    {
+      error("Expected '(' after if");
+    }
+
+    Expr *condition = parseExpression();
+
+    if (!eatToken(T_PARENR_RL))
+    {
+      error("Expected ')' after if condition");
+    }
+
+    if (!eatToken(T_BRACEL_RL))
+    {
+      error("Expected '{' before if body");
+    }
+
+    Stmt *thenBranch = parseBlock();
+    Stmt *elseBranch = nullptr;
+
+    if (eatToken(T_ELSE_RL) || eatToken(T_WARNA_RL))
+    {
+      if (!eatToken(T_BRACEL_RL))
+      {
+        error("Expected '{' before else body");
+      }
       elseBranch = parseBlock();
     }
 
-    return make_shared<Stmt>(IfStmt(condition, thenBranch, elseBranch));
+    return new IfStmt(condition, thenBranch, elseBranch);
   }
 
-  StmtPtr parseForStatement()
+  Stmt *parseForStatement()
   {
-    consume(T_PARENL_RL, ParseError::FailedToFindToken, "Expected '(' after 'for'");
-
-    StmtPtr init = nullptr;
-    if (isType(peek().type))
+    if (!eatToken(T_PARENL_RL))
     {
-      advance();
+      error("Expected '(' after for");
+    }
+
+    // Init part
+    Stmt *init = nullptr;
+    if (isTypeKeyword())
+    {
       init = parseVarDecl();
     }
-    else if (!check(T_DOT_RL))
+    else if (!isToken(T_DOT_RL))
     {
-      ExprPtr expr = parseExpression();
-      consume(T_DOT_RL, ParseError::FailedToFindToken, "Expected '.' after for init");
-      init = std::make_shared<Stmt>(ExprStmt(expr));
+      Expr *expr = parseExpression();
+      if (!eatToken(T_DOT_RL))
+      {
+        error("Expected '.' after for init");
+      }
+      init = new ExprStmt(expr);
     }
     else
     {
-      advance();
+      nextToken(); // Skip the dot
     }
 
-    ExprPtr condition = nullptr;
-    if (!check(T_DOT_RL))
+    // Condition part
+    Expr *condition = nullptr;
+    if (!isToken(T_DOT_RL))
     {
       condition = parseExpression();
     }
-    consume(T_DOT_RL, ParseError::FailedToFindToken, "Expected '.' after for condition");
+    if (!eatToken(T_DOT_RL))
+    {
+      error("Expected '.' after for condition");
+    }
 
-    ExprPtr update = nullptr;
-    if (!check(T_PARENR_RL))
+    // Update part
+    Expr *update = nullptr;
+    if (!isToken(T_PARENR_RL))
     {
       update = parseExpression();
     }
-    consume(T_PARENR_RL, ParseError::FailedToFindToken, "Expected ')' after for clauses");
 
-    consume(T_BRACEL_RL, ParseError::FailedToFindToken, "Expected '{' before for body");
-    StmtPtr body = parseBlock();
+    if (!eatToken(T_PARENR_RL))
+    {
+      error("Expected ')' after for clauses");
+    }
 
-    return make_shared<Stmt>(ForStmt(init, condition, update, body));
+    if (!eatToken(T_BRACEL_RL))
+    {
+      error("Expected '{' before for body");
+    }
+
+    Stmt *body = parseBlock();
+
+    return new ForStmt(init, condition, update, body);
   }
 
-  StmtPtr parseStatement()
+  Stmt *parseStatement()
   {
-    if (match({T_RETURN_RL, T_WAPSI_RL}))
+    // Return statement
+    if (eatToken(T_RETURN_RL) || eatToken(T_WAPSI_RL))
     {
-      ExprPtr expr = nullptr;
-      if (!check(T_DOT_RL))
+      Expr *expr = nullptr;
+      if (!isToken(T_DOT_RL))
       {
         expr = parseExpression();
       }
-      consume(T_DOT_RL, ParseError::FailedToFindToken, "Expected '.' after return statement");
-      return make_shared<Stmt>(ReturnStmt(expr));
+      if (!eatToken(T_DOT_RL))
+      {
+        error("Expected '.' after return");
+      }
+      return new ReturnStmt(expr);
     }
 
-    if (match({T_BREAK_RL, T_TORO_RL}))
+    // Break
+    if (eatToken(T_BREAK_RL) || eatToken(T_TORO_RL))
     {
-      return make_shared<Stmt>(BreakStmt());
+      return new BreakStmt();
     }
 
-    if (match({T_CONTINUE_RL, T_RAKHO_RL}))
+    // Continue
+    if (eatToken(T_CONTINUE_RL) || eatToken(T_RAKHO_RL))
     {
-      return make_shared<Stmt>(ContinueStmt());
+      return new ContinueStmt();
     }
 
-    if (match({T_IF_RL, T_AGAR_RL}))
+    // If statement
+    if (eatToken(T_IF_RL) || eatToken(T_AGAR_RL))
     {
       return parseIfStatement();
     }
 
-    if (match({T_WHILE_RL, T_JAB_RL}))
+    // While loop
+    if (eatToken(T_WHILE_RL) || eatToken(T_JAB_RL))
     {
-      consume(T_PARENL_RL, ParseError::FailedToFindToken, "Expected '(' after 'while'");
-      ExprPtr condition = parseExpression();
-      consume(T_PARENR_RL, ParseError::FailedToFindToken, "Expected ')' after condition");
-      consume(T_BRACEL_RL, ParseError::FailedToFindToken, "Expected '{' before while body");
-      StmtPtr body = parseBlock();
-      return make_shared<Stmt>(WhileStmt(condition, body));
+      if (!eatToken(T_PARENL_RL))
+      {
+        error("Expected '(' after while");
+      }
+      Expr *condition = parseExpression();
+      if (!eatToken(T_PARENR_RL))
+      {
+        error("Expected ')' after condition");
+      }
+      if (!eatToken(T_BRACEL_RL))
+      {
+        error("Expected '{' before while body");
+      }
+      Stmt *body = parseBlock();
+      return new WhileStmt(condition, body);
     }
 
-    if (match({T_FOR_RL, T_DUHRAO_RL}))
+    // For loop
+    if (eatToken(T_FOR_RL) || eatToken(T_DUHRAO_RL))
     {
       return parseForStatement();
     }
 
-    if (match({T_BRACEL_RL}))
+    // Block
+    if (eatToken(T_BRACEL_RL))
     {
       return parseBlock();
     }
 
-    if (isType(peek().type))
+    // Variable declaration
+    if (isTypeKeyword())
     {
-      advance();
       return parseVarDecl();
     }
 
-    ExprPtr expr = parseExpression();
-    consume(T_DOT_RL, ParseError::FailedToFindToken, "Expected '.' after expression");
-    return make_shared<Stmt>(ExprStmt(expr));
+    // Expression statement
+    Expr *expr = parseExpression();
+    if (!eatToken(T_DOT_RL))
+    {
+      error("Expected '.' after expression");
+    }
+    return new ExprStmt(expr);
   }
 
-  StmtPtr parseFunctionDecl()
+  Stmt *parseFunctionDecl()
   {
     TokenType returnType = T_INT_RL;
-    if (isType(peek().type))
+    if (isTypeKeyword())
     {
-      returnType = advance().type;
+      returnType = getToken().type;
     }
 
-    Token name = consume(T_IDENTIFIER_RL, ParseError::ExpectedIdentifier, "Expected function name");
+    if (!isToken(T_IDENTIFIER_RL))
+    {
+      error("Expected function name");
+    }
+    string name = getToken().value;
 
-    consume(T_PARENL_RL, ParseError::FailedToFindToken, "Expected '(' after function name");
+    if (!eatToken(T_PARENL_RL))
+    {
+      error("Expected '(' after function name");
+    }
 
     vector<Param> params;
-    if (!check(T_PARENR_RL))
+    while (!isToken(T_PARENR_RL) && !isEnd())
     {
-      do
+      if (!isTypeKeyword())
       {
-        if (!isType(peek().type))
-        {
-          throw ParseException(ParseError::ExpectedTypeToken, peek(), "Expected parameter type");
-        }
-        TokenType paramType = advance().type;
-        Token paramName = consume(T_IDENTIFIER_RL, ParseError::ExpectedIdentifier, "Expected parameter name");
-        params.push_back(Param(paramType, paramName.value));
-      } while (match({T_COMMA_RL}));
+        error("Expected parameter type");
+      }
+      TokenType paramType = getToken().type;
+
+      if (!isToken(T_IDENTIFIER_RL))
+      {
+        error("Expected parameter name");
+      }
+      string paramName = getToken().value;
+
+      params.push_back(Param(paramType, paramName));
+
+      if (!eatToken(T_COMMA_RL) && !isToken(T_PARENR_RL))
+      {
+        error("Expected ',' or ')' in parameters");
+      }
     }
 
-    consume(T_PARENR_RL, ParseError::FailedToFindToken, "Expected ')' after parameters");
-    consume(T_BRACEL_RL, ParseError::FailedToFindToken, "Expected '{' before function body");
+    if (!eatToken(T_PARENR_RL))
+    {
+      error("Expected ')' after parameters");
+    }
 
-    StmtPtr body = parseBlock();
-    consume(T_DOT_RL, ParseError::FailedToFindToken, "Expected '.' after function declaration");
+    if (!eatToken(T_BRACEL_RL))
+    {
+      error("Expected '{' before function body");
+    }
 
-    return make_shared<Stmt>(FunctionDecl(returnType, name.value, params, body));
+    Stmt *body = parseBlock();
+
+    if (!eatToken(T_DOT_RL))
+    {
+      error("Expected '.' after function");
+    }
+
+    return new FunctionDecl(returnType, name, params, body);
   }
 
 public:
-  Parser(const vector<Token> &tokenList) : tokens(tokenList) {}
-
-  vector<StmtPtr> parse()
+  Parser(vector<Token> tokenList)
   {
-    vector<StmtPtr> statements;
+    tokens = tokenList;
+    pos = 0;
+  }
 
-    while (!isAtEnd())
+  vector<Stmt *> parse()
+  {
+    vector<Stmt *> program;
+
+    while (!isEnd())
     {
-      try
+      if (eatToken(T_FUNCTION_RL) || eatToken(T_FN_RL))
       {
-        if (match({T_FUNCTION_RL, T_FN_RL}))
-        {
-          statements.push_back(parseFunctionDecl());
-        }
-        else
-        {
-          statements.push_back(parseStatement());
-        }
+        program.push_back(parseFunctionDecl());
       }
-      catch (const ParseException &e)
+      else
       {
-        std::cerr << "Parse error: " << e.what() << endl;
-
-        while (!isAtEnd() && !check(T_DOT_RL))
-        {
-          advance();
-        }
-        if (check(T_DOT_RL))
-          advance();
+        program.push_back(parseStatement());
       }
     }
 
-    return statements;
+    return program;
   }
 };
 
