@@ -26,3 +26,6 @@ A basic lexical analyzer that converts code into tokens.
 
 ![alt text](Results/images/image.png)
 ![alt text](Results/images/image-1.png)
+
+## PARSER RESULT
+![alt text](<output 1.2.jpeg>) ![alt text](<output 2.0.jpeg>) ![alt text](output1.2.jpeg) ![alt text](<input 1.jpeg>) ![alt text](<input 2.jpeg>) ![alt text](<out 1.0.jpeg>)
