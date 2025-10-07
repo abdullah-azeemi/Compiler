@@ -164,12 +164,12 @@ int main()
 {
   // Example no 1
   string example1 = R"(
-        fn ginti a(ginti x, ginti y) { wapsi x + y . } .
-        ginti b = a(3, 6) .
-        ginti f = 1 .
-        ginti z = 2 .
-        ginti h = 6 * f + 3 * 2 - b * b * z * z .
-        ginti c = 10 - (-b * 10 + 12) + (5 - 10) .
+        int a = b +  c * 245345 - b / -6245 + g .
+
+        parse_var_decl
+        
+
+
         )";
 
   // Example
