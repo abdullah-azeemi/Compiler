@@ -162,7 +162,7 @@ void printTokenStream(const vector<Token> &tokens)
 
 int main()
 {
-  // Example no 1
+  
   string example1 = R"(
         fn ginti a(ginti x, ginti y) { wapsi x + y . } .
         ginti b = a(3, 6) .
@@ -172,7 +172,7 @@ int main()
         ginti c = 10 - (-b * 10 + 12) + (5 - 10) .
         )";
 
-  // Example
+  
   string example2 = R"(
         fn ginti some_fn() {
           duhrao (ginti a = 0 . a < 10 . a = a + 1) {
@@ -191,8 +191,8 @@ int main()
        << endl;
 
   try
-  { // 1st example
-    // Tokenize the input
+  { 
+    
     Lexer lexer;
     auto tokens = lexer.tokenize(example1);
     cout << "## Token Stream\n"

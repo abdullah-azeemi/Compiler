@@ -9,22 +9,17 @@
 
 using namespace std;
 
-// My parsing approach: Look ahead and decide what block to build!
-// Like looking at LEGO instructions - see what piece comes next
-
 class Parser
 {
 private:
   vector<Token> tokens;
   int pos;
 
-  // Helper to check if we're done
   bool isEnd()
   {
     return pos >= tokens.size() || tokens[pos].type == T_EOF_RL;
   }
 
-  // Look at current token without moving
   Token currentToken()
   {
     if (pos < tokens.size())
@@ -32,7 +27,6 @@ private:
     return tokens.back();
   }
 
-  // Look ahead at next token
   Token peekNext()
   {
     if (pos + 1 < tokens.size())
@@ -40,14 +34,12 @@ private:
     return tokens.back();
   }
 
-  // Move to next token
   void nextToken()
   {
     if (!isEnd())
       pos++;
   }
 
-  // Check if current token is what we expect
   bool isToken(TokenType type)
   {
     return currentToken().type == type;
@@ -64,7 +56,6 @@ private:
     return false;
   }
 
-  // Get token and move forward
   Token getToken()
   {
     Token t = currentToken();
@@ -72,7 +63,6 @@ private:
     return t;
   }
 
-  // Check if token is a type keyword
   bool isTypeKeyword()
   {
     TokenType t = currentToken().type;
@@ -80,7 +70,6 @@ private:
            t == T_STRING_RL || t == T_BOOL_RL || t == T_GINTI_RL;
   }
 
-  // Error handling - simple!
   void error(string msg)
   {
     cerr << "Parse Error at line " << currentToken().line
@@ -89,54 +78,44 @@ private:
     exit(1);
   }
 
-  // ===== EXPRESSION PARSING =====
-  // Build expressions from bottom up, like stacking blocks
-
   Expr *parsePrimary()
   {
     Token tok = currentToken();
 
-    // Integer literal
     if (tok.type == T_INT_RLLIT)
     {
       nextToken();
       return new IntLiteral(stoi(tok.value));
     }
 
-    // Float literal
     if (tok.type == T_FLOAT_RLLIT)
     {
       nextToken();
       return new FloatLiteral(stod(tok.value));
     }
 
-    // String literal
     if (tok.type == T_STRING_RLLIT)
     {
       nextToken();
       return new StringLiteral(tok.value);
     }
 
-    // Boolean literal
     if (tok.type == T_BOOL_RLLIT)
     {
       nextToken();
       return new BoolLiteral(tok.value == "true");
     }
 
-    // Identifier or function call
     if (tok.type == T_IDENTIFIER_RL)
     {
       string name = tok.value;
       nextToken();
 
-      // Function call?
       if (isToken(T_PARENL_RL))
       {
         nextToken(); // eat (
         FunctionCall *call = new FunctionCall(name);
 
-        // Parse arguments
         while (!isToken(T_PARENR_RL) && !isEnd())
         {
           call->args.push_back(parseExpression());
@@ -286,8 +265,8 @@ private:
       string name = id->name;
       delete left; // Clean up
 
-      nextToken();                 // eat =
-      Expr *value = parseAssign(); // Right associative
+      nextToken();
+      Expr *value = parseAssign();
       return new Assignment(name, value);
     }
 
@@ -298,8 +277,6 @@ private:
   {
     return parseAssign();
   }
-
-  // ===== STATEMENT PARSING =====
 
   Stmt *parseVarDecl()
   {
