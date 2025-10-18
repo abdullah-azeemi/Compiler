@@ -248,8 +248,3 @@ arg_list
 
 %%
 
-int main() {
-    yyparse();
-    printf("Parsing completed successfully.\n");
-    return 0;
-}

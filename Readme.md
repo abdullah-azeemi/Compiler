@@ -1,31 +1,50 @@
-# Simple Lexer
+#  Simple Lexer & Parser
 
-A basic lexical analyzer that converts code into tokens.
+A **basic compiler front-end** that tokenizes source code and parses it into an **Abstract Syntax Tree (AST)**.
 
-## What it does
-- Takes code like: `fn add(int a) { return a + 1; }`
-- Splits it into tokens: `fn`, `add`, `(`, `int`, `a`, `)`, `{`, `return`, `a`, `+`, `1`, `;`, `}`
-- Identifies what each token is: function, identifier, parenthesis, etc.
+---
 
-## How to use
-1. Compile: `g++ -o lexer source.cpp`
-2. Run: `./lexer`
+### Lexical Analysis
 
-## Files
-- `lexer1.cpp` - The main lexer code
-- `string_queue.hpp` - Stores the tokens
-- `source.cpp` - Test program
-- `Makefile` - Easy build commands
+* Takes code like:
 
-## What it recognizes
-- Keywords: fn, return, if, while, int, float
-- Operators: +, -, *, /, =, ==, >, <
-- Symbols: (, ), {, }, ;, ,
-- Numbers: 42, 3.14
-- Names: variable names
+  ```cpp
+  fn add(int a) { return a + 1; }
+  ```
+* Splits it into tokens:
 
-![alt text](Results/images/image.png)
-![alt text](Results/images/image-1.png)
+  ```
+  fn, add, (, int, a, ), {, return, a, +, 1, ;, }
+  ```
+* Classifies each token (e.g., keyword, identifier, operator, symbol, number).
 
-## PARSER RESULT
-![alt text](<output 1.2.jpeg>) ![alt text](<output 2.0.jpeg>) ![alt text](output1.2.jpeg) ![alt text](<input 1.jpeg>) ![alt text](<input 2.jpeg>) ![alt text](<out 1.0.jpeg>)
+### Parsing
+
+* Converts the token stream into a structured AST.
+* Supports variable declarations, assignments, and expressions like:
+
+  ```cpp
+  int a = b + c ----d .
+  ```
+* Validates syntax and builds nested tree nodes such as:
+
+  ```
+  VarDecl(a = BinaryOp(+, b, UnaryOp(-, UnaryOp(-, UnaryOp(-, UnaryOp(-, d))))))
+  ```
+
+---
+
+## ⚙️ How to Use
+
+1. **Compile**
+
+   ```bash
+   g++ -std=c++17 -o lexer lexer1.cpp
+   ```
+2. **Run**
+
+   ```bash
+   ./lexer
+   ```
+
+---

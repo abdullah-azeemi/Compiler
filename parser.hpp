@@ -26,7 +26,10 @@ private:
       return tokens[pos];
     return tokens.back();
   }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
   Token peekNext()
   {
     if (pos + 1 < tokens.size())
@@ -39,13 +42,15 @@ private:
     if (!isEnd())
       pos++;
   }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
   bool isToken(TokenType type)
   {
     return currentToken().type == type;
   }
 
-  // Eat a token if it matches
   bool eatToken(TokenType type)
   {
     if (isToken(type))
@@ -62,7 +67,10 @@ private:
     nextToken();
     return t;
   }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
   bool isTypeKeyword()
   {
     TokenType t = currentToken().type;
@@ -81,41 +89,62 @@ private:
   Expr *parsePrimary()
   {
     Token tok = currentToken();
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
     if (tok.type == T_INT_RLLIT)
     {
       nextToken();
       return new IntLiteral(stoi(tok.value));
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
     if (tok.type == T_FLOAT_RLLIT)
     {
       nextToken();
       return new FloatLiteral(stod(tok.value));
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
     if (tok.type == T_STRING_RLLIT)
     {
       nextToken();
       return new StringLiteral(tok.value);
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
     if (tok.type == T_BOOL_RLLIT)
     {
       nextToken();
       return new BoolLiteral(tok.value == "true");
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
     if (tok.type == T_IDENTIFIER_RL)
     {
       string name = tok.value;
       nextToken();
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
       if (isToken(T_PARENL_RL))
       {
-        nextToken(); // eat (
+        nextToken();
         FunctionCall *call = new FunctionCall(name);
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
         while (!isToken(T_PARENR_RL) && !isEnd())
         {
           call->args.push_back(parseExpression());
@@ -131,11 +160,9 @@ private:
         }
         return call;
       }
-
       return new Identifier(name);
     }
 
-    // Parenthesized expression
     if (tok.type == T_PARENL_RL)
     {
       nextToken();
@@ -153,7 +180,6 @@ private:
 
   Expr *parseUnary()
   {
-    // Handle unary operators (-, !)
     if (isToken(T_MINUS_RL) || isToken(T_NOT_RL))
     {
       Token op = getToken();
@@ -161,42 +187,33 @@ private:
     }
     return parsePrimary();
   }
-
-  // Binary operations - using precedence climbing!
-  // Think of it like building layers of blocks
-
   Expr *parseMultiply()
   {
     Expr *left = parseUnary();
-
     while (isToken(T_MUL_RL) || isToken(T_DIV_RL) || isToken(T_MOD_RL))
     {
       Token op = getToken();
       Expr *right = parseUnary();
       left = new BinaryOp(op.type, left, right);
     }
-
     return left;
   }
 
   Expr *parseAdd()
   {
     Expr *left = parseMultiply();
-
     while (isToken(T_PLUS_RL) || isToken(T_MINUS_RL))
     {
       Token op = getToken();
       Expr *right = parseMultiply();
       left = new BinaryOp(op.type, left, right);
     }
-
     return left;
   }
 
   Expr *parseCompare()
   {
     Expr *left = parseAdd();
-
     while (isToken(T_LESS_THAN_RL) || isToken(T_GREATER_THAN_RL) ||
            isToken(T_LESS_EQUAL_RL) || isToken(T_GREATER_EQUAL_RL))
     {
@@ -204,72 +221,66 @@ private:
       Expr *right = parseAdd();
       left = new BinaryOp(op.type, left, right);
     }
-
     return left;
   }
 
   Expr *parseEquality()
   {
     Expr *left = parseCompare();
-
     while (isToken(T_EQUALSOP_RL) || isToken(T_NOT_EQUALS_RL))
     {
       Token op = getToken();
       Expr *right = parseCompare();
       left = new BinaryOp(op.type, left, right);
     }
-
     return left;
   }
 
   Expr *parseLogicalAnd()
   {
     Expr *left = parseEquality();
-
     while (isToken(T_AND_LOGICAL_RL))
     {
       Token op = getToken();
       Expr *right = parseEquality();
       left = new BinaryOp(op.type, left, right);
     }
-
     return left;
   }
 
   Expr *parseLogicalOr()
   {
     Expr *left = parseLogicalAnd();
-
     while (isToken(T_OR_LOGICAL_RL))
     {
       Token op = getToken();
       Expr *right = parseLogicalAnd();
       left = new BinaryOp(op.type, left, right);
     }
-
     return left;
   }
 
   Expr *parseAssign()
   {
     Expr *left = parseLogicalOr();
-
     if (isToken(T_ASSIGNOP_RL))
     {
-      // Check if left is an identifier
       if (left->nodeType != NODE_IDENTIFIER)
       {
         error("Can only assign to variables");
       }
       Identifier *id = (Identifier *)left;
       string name = id->name;
+<<<<<<< HEAD
       delete left; // Clean up
 
+=======
+      delete left;
+>>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
       nextToken();
       Expr *value = parseAssign();
       return new Assignment(name, value);
     }
-
     return left;
   }
 
@@ -281,41 +292,34 @@ private:
   Stmt *parseVarDecl()
   {
     Token typeToken = getToken();
-
     if (!isToken(T_IDENTIFIER_RL))
     {
       error("Expected variable name");
     }
     string name = getToken().value;
-
     Expr *init = nullptr;
     if (eatToken(T_ASSIGNOP_RL))
     {
       init = parseExpression();
     }
-
     if (!eatToken(T_DOT_RL))
     {
       error("Expected '.' after variable declaration");
     }
-
     return new VarDecl(typeToken.type, name, init);
   }
 
   Stmt *parseBlock()
   {
     Block *block = new Block();
-
     while (!isToken(T_BRACER_RL) && !isEnd())
     {
       block->stmts.push_back(parseStatement());
     }
-
     if (!eatToken(T_BRACER_RL))
     {
       error("Expected '}' after block");
     }
-
     return block;
   }
 
@@ -325,22 +329,17 @@ private:
     {
       error("Expected '(' after if");
     }
-
     Expr *condition = parseExpression();
-
     if (!eatToken(T_PARENR_RL))
     {
       error("Expected ')' after if condition");
     }
-
     if (!eatToken(T_BRACEL_RL))
     {
       error("Expected '{' before if body");
     }
-
     Stmt *thenBranch = parseBlock();
     Stmt *elseBranch = nullptr;
-
     if (eatToken(T_ELSE_RL) || eatToken(T_WARNA_RL))
     {
       if (!eatToken(T_BRACEL_RL))
@@ -359,8 +358,6 @@ private:
     {
       error("Expected '(' after for");
     }
-
-    // Init part
     Stmt *init = nullptr;
     if (isTypeKeyword())
     {
@@ -377,10 +374,9 @@ private:
     }
     else
     {
-      nextToken(); // Skip the dot
+      nextToken();
     }
 
-    // Condition part
     Expr *condition = nullptr;
     if (!isToken(T_DOT_RL))
     {
@@ -390,8 +386,6 @@ private:
     {
       error("Expected '.' after for condition");
     }
-
-    // Update part
     Expr *update = nullptr;
     if (!isToken(T_PARENR_RL))
     {
@@ -415,7 +409,6 @@ private:
 
   Stmt *parseStatement()
   {
-    // Return statement
     if (eatToken(T_RETURN_RL) || eatToken(T_WAPSI_RL))
     {
       Expr *expr = nullptr;
@@ -429,26 +422,18 @@ private:
       }
       return new ReturnStmt(expr);
     }
-
-    // Break
     if (eatToken(T_BREAK_RL) || eatToken(T_TORO_RL))
     {
       return new BreakStmt();
     }
-
-    // Continue
     if (eatToken(T_CONTINUE_RL) || eatToken(T_RAKHO_RL))
     {
       return new ContinueStmt();
     }
-
-    // If statement
     if (eatToken(T_IF_RL) || eatToken(T_AGAR_RL))
     {
       return parseIfStatement();
     }
-
-    // While loop
     if (eatToken(T_WHILE_RL) || eatToken(T_JAB_RL))
     {
       if (!eatToken(T_PARENL_RL))
@@ -468,25 +453,18 @@ private:
       return new WhileStmt(condition, body);
     }
 
-    // For loop
     if (eatToken(T_FOR_RL) || eatToken(T_DUHRAO_RL))
     {
       return parseForStatement();
     }
-
-    // Block
     if (eatToken(T_BRACEL_RL))
     {
       return parseBlock();
     }
-
-    // Variable declaration
     if (isTypeKeyword())
     {
       return parseVarDecl();
     }
-
-    // Expression statement
     Expr *expr = parseExpression();
     if (!eatToken(T_DOT_RL))
     {

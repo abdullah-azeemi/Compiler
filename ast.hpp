@@ -7,9 +7,6 @@
 
 using namespace std;
 
-// My approach: Think of AST nodes like LEGO blocks
-// Each block has a type so we know what it is
-
 enum NodeType
 {
   NODE_INT_LIT,
@@ -33,16 +30,12 @@ enum NodeType
   NODE_FUNC_DECL
 };
 
-// Base class for all AST nodes
 class ASTNode
 {
 public:
   NodeType nodeType;
   virtual ~ASTNode() {}
 };
-
-// ===== EXPRESSIONS =====
-// These calculate values
 
 class Expr : public ASTNode
 {
@@ -138,9 +131,6 @@ public:
       delete arg;
   }
 };
-
-// ===== STATEMENTS =====
-// These do actions
 
 class Stmt : public ASTNode
 {
