@@ -3,6 +3,7 @@
 #include <sstream>
 #include "regex_lexer.hpp"
 #include "parser.hpp"
+#include "scope_analyzer.hpp"
 #include "Utilities/ast_printer.hpp"
 
 using namespace std;
@@ -166,7 +167,7 @@ int main()
   string example1 = R"(
         int a = b +  c * 245345 - b / -6245 + g .
 
-        parse_var_decl
+        parse_var_decl .
         
 
 
@@ -211,6 +212,16 @@ int main()
     cout << ASTPrinter::printAST(ast) << endl;
     cout << "```\n"
          << endl;
+
+    // Scope Analysis
+    cout << "# Scope Analysis\n"
+         << endl;
+    ScopeAnalyzer scopeAnalyzer;
+    for (auto stmt : ast)
+    {
+      scopeAnalyzer.analyze(stmt);
+    }
+
   }
   catch (const ParseException &e)
   {
@@ -245,6 +256,16 @@ int main()
     cout << ASTPrinter::printAST(ast) << endl;
     cout << "```\n"
          << endl;
+
+
+    // Scope Analysis
+    cout << "# Scope Analysis\n"
+         << endl;
+    ScopeAnalyzer scopeAnalyzer;
+    for (auto stmt : ast)
+    {
+      scopeAnalyzer.analyze(stmt);
+    }
   }
   catch (const ParseException &e)
   {

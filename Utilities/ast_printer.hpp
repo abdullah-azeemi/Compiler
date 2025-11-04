@@ -163,6 +163,10 @@ private:
       out << indent(level) << "})";
       break;
     }
+    default:
+      out << "/* Unhandled expression node type: " << expr->nodeType << " */";
+      break;
+
     }
   }
 
@@ -376,8 +380,14 @@ private:
       }
       break;
     }
+    default:
+    {
+      out << indent(level) << "/* Unhandled statement node type: " << stmt->nodeType << " */\n";
+     break;
     }
+
   }
+}
 
 public:
   static string printAST(const vector<Stmt *> &ast)

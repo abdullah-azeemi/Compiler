@@ -26,10 +26,6 @@ private:
       return tokens[pos];
     return tokens.back();
   }
-<<<<<<< HEAD
-
-=======
->>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
   Token peekNext()
   {
     if (pos + 1 < tokens.size())
@@ -42,10 +38,6 @@ private:
     if (!isEnd())
       pos++;
   }
-<<<<<<< HEAD
-
-=======
->>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
   bool isToken(TokenType type)
   {
     return currentToken().type == type;
@@ -67,10 +59,6 @@ private:
     nextToken();
     return t;
   }
-<<<<<<< HEAD
-
-=======
->>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
   bool isTypeKeyword()
   {
     TokenType t = currentToken().type;
@@ -89,62 +77,34 @@ private:
   Expr *parsePrimary()
   {
     Token tok = currentToken();
-<<<<<<< HEAD
-
-=======
->>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
     if (tok.type == T_INT_RLLIT)
     {
       nextToken();
       return new IntLiteral(stoi(tok.value));
     }
-<<<<<<< HEAD
-
-=======
->>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
     if (tok.type == T_FLOAT_RLLIT)
     {
       nextToken();
       return new FloatLiteral(stod(tok.value));
     }
-<<<<<<< HEAD
-
-=======
->>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
     if (tok.type == T_STRING_RLLIT)
     {
       nextToken();
       return new StringLiteral(tok.value);
     }
-<<<<<<< HEAD
-
-=======
->>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
     if (tok.type == T_BOOL_RLLIT)
     {
       nextToken();
       return new BoolLiteral(tok.value == "true");
     }
-<<<<<<< HEAD
-
-=======
->>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
     if (tok.type == T_IDENTIFIER_RL)
     {
       string name = tok.value;
       nextToken();
-<<<<<<< HEAD
-
-=======
->>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
       if (isToken(T_PARENL_RL))
       {
         nextToken();
         FunctionCall *call = new FunctionCall(name);
-<<<<<<< HEAD
-
-=======
->>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
         while (!isToken(T_PARENR_RL) && !isEnd())
         {
           call->args.push_back(parseExpression());
@@ -271,12 +231,8 @@ private:
       }
       Identifier *id = (Identifier *)left;
       string name = id->name;
-<<<<<<< HEAD
       delete left; // Clean up
 
-=======
-      delete left;
->>>>>>> 0e523f8d12df38678e1c2149e84cf2279392a513
       nextToken();
       Expr *value = parseAssign();
       return new Assignment(name, value);
