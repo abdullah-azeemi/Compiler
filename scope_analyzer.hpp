@@ -32,7 +32,6 @@ struct Symbol {
         : name(n), type(t), isFunction(func), isDefined(defined) {}
 };
 
-
 // Scope (spaghetti scope representation)
 class Scope {
 public:
@@ -61,7 +60,7 @@ public:
 class ScopeAnalyzer {
 private:
     shared_ptr<Scope> currentScope;
-
+    
     void pushScope() {
         currentScope = make_shared<Scope>(currentScope);
     }
@@ -206,9 +205,23 @@ public:
             break;
         }
 
+        case NODE_RETURN: {
+            auto *ret = static_cast<ReturnStmt *>(node);
+            if (ret->expr) analyze(ret->expr);
+            break;
+        }
+
         default:
             break;
         }
+    }
+
+    shared_ptr<Scope> getGlobalScope() {
+        auto s = currentScope;
+        while (s->parent) {
+            s = s->parent;
+        }
+        return s;
     }
 };
 

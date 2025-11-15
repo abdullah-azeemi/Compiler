@@ -5,6 +5,8 @@
 #include "parser.hpp"
 #include "scope_analyzer.hpp"
 #include "Utilities/ast_printer.hpp"
+#include "type_checker.hpp"
+
 
 using namespace std;
 
@@ -173,16 +175,16 @@ int main()
 
         )";
 
-  
-  string example2 = R"(
-        fn ginti some_fn() {
-          duhrao (ginti a = 0 . a < 10 . a = a + 1) {
-            agar (a == 5) { toro } warna {}
-          }
-
-          wapsi 5 .
+ string example2 = R"(
+        fn ginti multiply(ginti a, ginti b) {
+            wapsi a + b .
         } .
-        )";
+        
+        fn ginti test_fn() {
+            ginti result = multiply(5.5, 10) .
+            wapsi result .
+        } .
+  )";
 
   cout << "# Example 01 - Expressions\n"
        << endl;
@@ -221,6 +223,11 @@ int main()
     {
       scopeAnalyzer.analyze(stmt);
     }
+    cout << "# Type Checker\n";
+    TypeChecker typeChecker;
+    typeChecker.check(ast, scopeAnalyzer.getGlobalScope());
+
+    
 
   }
   catch (const ParseException &e)
@@ -266,6 +273,10 @@ int main()
     {
       scopeAnalyzer.analyze(stmt);
     }
+    cout << "# Type Checker\n";
+    TypeChecker typeChecker;
+    typeChecker.check(ast, scopeAnalyzer.getGlobalScope());
+
   }
   catch (const ParseException &e)
   {
