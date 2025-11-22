@@ -325,14 +325,14 @@ private:
                 checkIfStmt(ifStmt);
                 break;
             }
-            case NODE_WHILE: {
-                auto* whileStmt = static_cast<WhileStmt*>(stmt);
-                checkWhileStmt(whileStmt);
-                break;
-            }
             case NODE_FOR: {
                 auto* forStmt = static_cast<ForStmt*>(stmt);
                 checkForStmt(forStmt);
+                break;
+            }
+            case NODE_WHILE:{
+                auto *whileStmt = static_cast<WhileStmt *>(stmt);
+                checkWhileStmt(whileStmt); 
                 break;
             }
             default:

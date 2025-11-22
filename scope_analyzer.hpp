@@ -179,6 +179,19 @@ public:
             popScope();
             break;
         }
+        case NODE_BREAK:
+        {
+            break;
+        }
+        case NODE_CONTINUE:
+        {
+            break;
+        }
+        case NODE_RETURN: {
+            auto *ret = static_cast<ReturnStmt *>(node);
+            if (ret->expr) analyze(ret->expr);
+            break;
+        }
 
         case NODE_FUNC_DECL: {
             auto *fd = static_cast<FunctionDecl *>(node);
@@ -202,12 +215,6 @@ public:
         case NODE_EXPR_STMT: {
             auto *es = static_cast<ExprStmt *>(node);
             analyze(es->expr);
-            break;
-        }
-
-        case NODE_RETURN: {
-            auto *ret = static_cast<ReturnStmt *>(node);
-            if (ret->expr) analyze(ret->expr);
             break;
         }
 

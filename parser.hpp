@@ -231,7 +231,7 @@ private:
       }
       Identifier *id = (Identifier *)left;
       string name = id->name;
-      delete left; // Clean up
+      delete left; 
 
       nextToken();
       Expr *value = parseAssign();
@@ -378,14 +378,25 @@ private:
       }
       return new ReturnStmt(expr);
     }
+    
     if (eatToken(T_BREAK_RL) || eatToken(T_TORO_RL))
     {
+      if (!eatToken(T_DOT_RL))
+      {
+        error("Expected '.' after break statement");
+      }
       return new BreakStmt();
     }
+    
     if (eatToken(T_CONTINUE_RL) || eatToken(T_RAKHO_RL))
     {
+      if (!eatToken(T_DOT_RL))
+      {
+        error("Expected '.' after continue statement");
+      }
       return new ContinueStmt();
     }
+    
     if (eatToken(T_IF_RL) || eatToken(T_AGAR_RL))
     {
       return parseIfStatement();

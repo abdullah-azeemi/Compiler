@@ -1,11 +1,14 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include "regex_lexer.hpp"
 #include "parser.hpp"
 #include "scope_analyzer.hpp"
 #include "Utilities/ast_printer.hpp"
 #include "type_checker.hpp"
+#include "ir_generator.hpp" 
+#include "qbe_generator.hpp"
 
 
 using namespace std;
@@ -165,26 +168,18 @@ void printTokenStream(const vector<Token> &tokens)
 
 int main()
 {
+  fstream file;
+  string example1 = "";
+  file.open("test.txt", ios::in);
+  if (file.is_open()) {
+    string line;
+    while (getline(file, line)) {
+      cout << line << endl;
+      example1 += line;
+    }
+    file.close();
+  }
   
-  string example1 = R"(
-        int a = b +  c * 245345 - b / -6245 + g .
-
-        parse_var_decl .
-        
-
-
-        )";
-
- string example2 = R"(
-        fn ginti multiply(ginti a, ginti b) {
-            wapsi a + b .
-        } .
-        
-        fn ginti test_fn() {
-            ginti result = multiply(5.5, 10) .
-            wapsi result .
-        } .
-  )";
 
   cout << "# Example 01 - Expressions\n"
        << endl;
@@ -223,64 +218,33 @@ int main()
     {
       scopeAnalyzer.analyze(stmt);
     }
+    
+    // Type Checker
     cout << "# Type Checker\n";
     TypeChecker typeChecker;
     typeChecker.check(ast, scopeAnalyzer.getGlobalScope());
 
-    
 
+    cout << "# Intermediate Representation (TAC)\\n";
+    IRGenerator irGenerator;
+    auto quads = irGenerator.generate(ast);
+    irGenerator.printIRCode();
+
+    // --- QBE Generation (The New Backend) ---
+    cout << "# QBE Backend Generation\\n";
+    QBEGenerator qbeGenerator;
+    string qbeCode = qbeGenerator.generate(quads);
+    
+    cout << "--- Generated QBE IR ---\\n";
+    cout << qbeCode;
+    cout << "--------------------------\\n";
+    
   }
   catch (const ParseException &e)
   {
     std::cerr << "Parse error in Example 1: " << e.what() << endl;
   }
 
-  cout << "# Example 02 - Nested Blocks\n"
-       << endl;
-  cout << "## Source code\n"
-       << endl;
-  cout << "```" << example2 << "```\n"
-       << endl;
-
-  try
-  { // 2nd example
-    // Tokenize
-    Lexer lexer;
-    auto tokens = lexer.tokenize(example2);
-    cout << "## Token Stream\n"
-         << endl;
-    cout << "```" << endl;
-    printTokenStream(tokens);
-    cout << "```\n"
-         << endl;
-
-    // parsing
-    Parser parser(tokens);
-    auto ast = parser.parse();
-    cout << "## Abstract Syntax Tree\n"
-         << endl;
-    cout << "```" << endl;
-    cout << ASTPrinter::printAST(ast) << endl;
-    cout << "```\n"
-         << endl;
-
-
-    // Scope Analysis
-    cout << "# Scope Analysis\n"
-         << endl;
-    ScopeAnalyzer scopeAnalyzer;
-    for (auto stmt : ast)
-    {
-      scopeAnalyzer.analyze(stmt);
-    }
-    cout << "# Type Checker\n";
-    TypeChecker typeChecker;
-    typeChecker.check(ast, scopeAnalyzer.getGlobalScope());
-
-  }
-  catch (const ParseException &e)
-  {
-    std::cerr << "Parse error in Example 2: " << e.what() << endl;
-  }
+  
   return 0;
 }
