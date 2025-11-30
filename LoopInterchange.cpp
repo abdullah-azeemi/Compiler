@@ -18,7 +18,7 @@
 //    manner — the pass lets the pass manager recompute analyses if needed afterwards.
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/LoopAnalysis.h"
+
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Verifier.h"
@@ -67,7 +67,7 @@ bool interchangeLoops(Loop *Outer, Loop *Inner, LoopInfo &LI, DominatorTree &DT)
     if (!isSimpleCanonicalLoop(Outer) || !isSimpleCanonicalLoop(Inner))
         return false;
 
-    SmallVector<Loop *, 4> subs = Outer->getSubLoops();
+    auto subs = Outer->getSubLoops();
     if (subs.size() != 1 || subs[0] != Inner) return false;
 
     BasicBlock *outerHeader = Outer->getHeader();
@@ -89,8 +89,7 @@ bool interchangeLoops(Loop *Outer, Loop *Inner, LoopInfo &LI, DominatorTree &DT)
     }
 
     // collect inner blocks
-    SmallVector<BasicBlock*,8> innerBlocks;
-    Inner->getBlocks(innerBlocks);
+    auto innerBlocks = Inner->getBlocks();
 
     ValueToValueMapTy VMap;
     Function *F = outerHeader->getParent();
@@ -113,7 +112,7 @@ bool interchangeLoops(Loop *Outer, Loop *Inner, LoopInfo &LI, DominatorTree &DT)
     BasicBlock *clonedInnerLatch = cast_or_null<BasicBlock>(VMap[innerLatch]);
 
     // rewire: outer preheader -> innerPre  becomes -> clonedInnerPre
-    TerminatorInst *TP = outerPre->getTerminator();
+    Instruction *TP = outerPre->getTerminator();
     if (TP) {
         for (unsigned i = 0, e = TP->getNumSuccessors(); i != e; ++i) {
             if (TP->getSuccessor(i) == innerPre && clonedInnerPre)
@@ -124,7 +123,7 @@ bool interchangeLoops(Loop *Outer, Loop *Inner, LoopInfo &LI, DominatorTree &DT)
     // rewire cloned inner latch: where it used to branch to cloned inner header on loop back,
     // make it branch to the original outer header (so original outer executes as inner).
     if (clonedInnerLatch) {
-        TerminatorInst *T = clonedInnerLatch->getTerminator();
+        Instruction *T = clonedInnerLatch->getTerminator();
         for (unsigned i = 0, e = T->getNumSuccessors(); i != e; ++i) {
             if (T->getSuccessor(i) == VMap[innerHeader]) {
                 T->setSuccessor(i, outerHeader);
@@ -136,7 +135,7 @@ bool interchangeLoops(Loop *Outer, Loop *Inner, LoopInfo &LI, DominatorTree &DT)
     }
 
     // outer latch: change its loop-back successor from outerHeader to clonedInnerHeader
-    TerminatorInst *OuterLT = outerLatch->getTerminator();
+    Instruction *OuterLT = outerLatch->getTerminator();
     if (OuterLT && clonedInnerHeader) {
         for (unsigned i = 0, e = OuterLT->getNumSuccessors(); i != e; ++i) {
             if (OuterLT->getSuccessor(i) == outerHeader)
@@ -156,7 +155,7 @@ struct LoopInterchangePass : PassInfoMixin<LoopInterchangePass> {
 
         bool Changed = false;
         for (Loop *L : LI) {
-            SmallVector<Loop*,4> subs = L->getSubLoops();
+            auto subs = L->getSubLoops();
             if (subs.size() != 1) continue;
             Loop *Inner = subs[0];
             if (!Inner->getSubLoops().empty()) continue;
