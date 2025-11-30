@@ -3,70 +3,56 @@ source_filename = "../test.c"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "arm64-apple-macosx15.0.0"
 
-; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
-define void @work(ptr noundef %0, i32 noundef %1, i32 noundef %2) #0 {
-  %4 = alloca ptr, align 8
-  %5 = alloca i32, align 4
-  %6 = alloca i32, align 4
-  %7 = alloca i32, align 4
-  %8 = alloca i32, align 4
-  store ptr %0, ptr %4, align 8
-  store i32 %1, ptr %5, align 4
-  store i32 %2, ptr %6, align 4
-  store i32 0, ptr %7, align 4
+; Function Attrs: nofree norecurse nosync nounwind ssp memory(argmem: write) uwtable(sync)
+define void @work(ptr noundef writeonly captures(none) %0, i32 noundef %1, i32 noundef %2) local_unnamed_addr #0 {
+  %4 = icmp sgt i32 %1, 0
+  br i1 %4, label %5, label %.loopexit2
+
+5:                                                ; preds = %3
+  %6 = icmp sgt i32 %2, 0
+  %7 = zext i32 %2 to i64
+  %8 = zext nneg i32 %1 to i64
   br label %9
 
-9:                                                ; preds = %34, %3
-  %10 = load i32, ptr %7, align 4
-  %11 = load i32, ptr %5, align 4
-  %12 = icmp slt i32 %10, %11
-  br i1 %12, label %13, label %37
+9:                                                ; preds = %23, %5
+  %10 = phi i64 [ 0, %5 ], [ %14, %.loopexit ]
+  br i1 %6, label %11, label %.loopexit
 
-13:                                               ; preds = %9
-  store i32 0, ptr %8, align 4
-  br label %14
+11:                                               ; preds = %9
+  %12 = mul nuw nsw i64 %10, %7
+  %13 = getelementptr inbounds nuw i32, ptr %0, i64 %12
+  br label %16
 
-14:                                               ; preds = %30, %13
-  %15 = load i32, ptr %8, align 4
-  %16 = load i32, ptr %6, align 4
-  %17 = icmp slt i32 %15, %16
-  br i1 %17, label %18, label %33
-
-18:                                               ; preds = %14
-  %19 = load i32, ptr %7, align 4
-  %20 = load i32, ptr %8, align 4
-  %21 = add nsw i32 %19, %20
-  %22 = load ptr, ptr %4, align 8
-  %23 = load i32, ptr %7, align 4
-  %24 = load i32, ptr %6, align 4
-  %25 = mul nsw i32 %23, %24
-  %26 = load i32, ptr %8, align 4
-  %27 = add nsw i32 %25, %26
-  %28 = sext i32 %27 to i64
-  %29 = getelementptr inbounds i32, ptr %22, i64 %28
-  store i32 %21, ptr %29, align 4
-  br label %30
-
-30:                                               ; preds = %18
-  %31 = load i32, ptr %8, align 4
-  %32 = add nsw i32 %31, 1
-  store i32 %32, ptr %8, align 4
-  br label %14, !llvm.loop !6
-
-33:                                               ; preds = %14
-  br label %34
-
-34:                                               ; preds = %33
-  %35 = load i32, ptr %7, align 4
-  %36 = add nsw i32 %35, 1
-  store i32 %36, ptr %7, align 4
-  br label %9, !llvm.loop !8
-
-37:                                               ; preds = %9
+.loopexit2:                                       ; preds = %.loopexit, %3
   ret void
+
+.loopexit:                                        ; preds = %23, %16, %9
+  %14 = add nuw nsw i64 %10, 1
+  %15 = icmp eq i64 %14, %8
+  br i1 %15, label %.loopexit2, label %23, !llvm.loop !6
+
+16:                                               ; preds = %16, %11
+  %17 = phi i64 [ 0, %11 ], [ %21, %16 ]
+  %18 = add nuw nsw i64 %17, %10
+  %19 = getelementptr inbounds nuw i32, ptr %13, i64 %17
+  %20 = trunc nuw i64 %18 to i32
+  store i32 %20, ptr %19, align 4, !tbaa !9
+  %21 = add nuw nsw i64 %17, 1
+  %22 = icmp eq i64 %21, %7
+  br i1 %22, label %.loopexit, label %16, !llvm.loop !13
+
+23:                                               ; preds = %.loopexit
+  %24 = phi i64 [ 0, %11 ], [ %28, %23 ]
+  %25 = add nuw nsw i64 %24, %10
+  %26 = getelementptr inbounds nuw i32, ptr %13, i64 %24
+  %27 = trunc nuw i64 %25 to i32
+  store i32 %27, ptr %26, align 4, !tbaa !9
+  %28 = add nuw nsw i64 %24, 1
+  %29 = icmp eq i64 %28, %7
+  br i1 %29, label %.loopexit, label %9, !llvm.loop !13
 }
 
-attributes #0 = { noinline nounwind optnone ssp uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a" }
+attributes #0 = { nofree norecurse nosync nounwind ssp memory(argmem: write) uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a" }
 
 !llvm.module.flags = !{!0, !1, !2, !3, !4}
 !llvm.ident = !{!5}
@@ -77,6 +63,11 @@ attributes #0 = { noinline nounwind optnone ssp uwtable(sync) "frame-pointer"="n
 !3 = !{i32 7, !"uwtable", i32 1}
 !4 = !{i32 7, !"frame-pointer", i32 1}
 !5 = !{!"Homebrew clang version 21.1.6"}
-!6 = distinct !{!6, !7}
+!6 = distinct !{!6, !7, !8}
 !7 = !{!"llvm.loop.mustprogress"}
-!8 = distinct !{!8, !7}
+!8 = !{!"llvm.loop.unroll.disable"}
+!9 = !{!10, !10, i64 0}
+!10 = !{!"int", !11, i64 0}
+!11 = !{!"omnipotent char", !12, i64 0}
+!12 = !{!"Simple C/C++ TBAA"}
+!13 = distinct !{!13, !7, !8}

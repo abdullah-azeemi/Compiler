@@ -1,0 +1,2 @@
+LoopInterchange: candidate found in function work
+LoopInterchange: applied clone+rewire interchange (best-effort).

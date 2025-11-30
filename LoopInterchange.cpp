@@ -149,9 +149,9 @@ bool interchangeLoops(Loop *Outer, Loop *Inner, LoopInfo &LI, DominatorTree &DT)
 
 struct LoopInterchangePass : PassInfoMixin<LoopInterchangePass> {
     PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
-        LoopAnalysis::Result &LA = AM.getResult<LoopAnalysis>(F);
-        LoopInfo &LI = LA; // alias
-        DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+        // Compute our own DominatorTree and LoopInfo to avoid analysis registration issues
+        DominatorTree DT(F);
+        LoopInfo LI(DT);
 
         bool Changed = false;
         for (Loop *L : LI) {
